@@ -61,12 +61,6 @@
         "type": "png"
       },
       {
-        "file": "images/menuicon.png",
-        "menuIcon": true,
-        "name": "IMAGE_MENU_ICON",
-        "type": "png"
-      },
-      {
         "file": "images/brokenantenna.png",
         "name": "IMAGE_BROKEN_ANTENNA",
         "type": "png"
@@ -117,7 +111,10 @@
   },
   "targetPlatforms": [
     "aplite",
-    "basalt"
+    "basalt",
+    "diorite",
+    "emery",
+    "flint"
   ],
   "sdkVersion": "3"
 }
