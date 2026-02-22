@@ -2025,11 +2025,11 @@ void window_load_cgm(Window *window_cgm) {
 
 	// HEART RATE DISPLAY (number only, to the right of heart icon)
 	#ifdef PBL_COLOR
-	hr_layer = text_layer_create(GRect(65, 58, 24, 24));
+	hr_layer = text_layer_create(GRect(65, 58, 36, 24));
 	text_layer_set_text_color(hr_layer, GColorDukeBlue);
 	text_layer_set_background_color(hr_layer, GColorWhite);
 	#else
-	hr_layer = text_layer_create(GRect(65, 58, 24, 24));
+	hr_layer = text_layer_create(GRect(65, 58, 36, 24));
 	text_layer_set_text_color(hr_layer, GColorBlack);
 	text_layer_set_background_color(hr_layer, GColorClear);
 	#endif
