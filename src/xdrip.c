@@ -450,16 +450,17 @@ static void load_heart_rate() {
 	// Check if HR is available
 	HealthValue hr = health_service_peek_current_value(HealthMetricHeartRateBPM);
 	
-	if (hr > 0) {
+	// Validate the reading (HR should be between 30 and 220 for humans)
+	if (hr > 30 && hr < 220) {
 		snprintf(hr_text, sizeof(hr_text), "%d", (int)hr);
-		// Got a reading, don't retry
+		// Got a valid reading, don't retry
 		if (hr_timer != NULL) {
 			app_timer_cancel(hr_timer);
 			hr_timer = NULL;
 		}
 	} else {
+		// Invalid or no reading, show -- and retry
 		snprintf(hr_text, sizeof(hr_text), "--");
-		// No reading yet, retry in 5 seconds
 		if (hr_timer == NULL) {
 			hr_timer = app_timer_register(5000, hr_timer_callback, NULL);
 		}
