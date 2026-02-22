@@ -48,6 +48,7 @@ static uint8_t sync_buffer_cgm[140];
 // variables for timers and time
 AppTimer *timer_cgm = NULL;
 AppTimer *BT_timer = NULL;
+AppTimer *hr_timer = NULL;  // Timer for retrying HR read
 time_t time_now = 0;
 
 // global variable for bluetooth connection
@@ -438,14 +439,30 @@ static void battery_handler(BatteryChargeState charge_state) {
 } // end battery_handler
 
 // load_heart_rate - reads current heart rate and updates display
+static void load_heart_rate();
+
+static void hr_timer_callback(void *data) {
+	hr_timer = NULL;
+	load_heart_rate();
+}
+
 static void load_heart_rate() {
 	// Check if HR is available
 	HealthValue hr = health_service_peek_current_value(HealthMetricHeartRateBPM);
 	
 	if (hr > 0) {
 		snprintf(hr_text, sizeof(hr_text), "%d", (int)hr);
+		// Got a reading, don't retry
+		if (hr_timer != NULL) {
+			app_timer_cancel(hr_timer);
+			hr_timer = NULL;
+		}
 	} else {
 		snprintf(hr_text, sizeof(hr_text), "--");
+		// No reading yet, retry in 5 seconds
+		if (hr_timer == NULL) {
+			hr_timer = app_timer_register(5000, hr_timer_callback, NULL);
+		}
 	}
 	
 	if (hr_layer != NULL) {
@@ -2237,6 +2254,12 @@ static void deinit_cgm(void) {
 	if (BT_timer != NULL) {
 		app_timer_cancel(BT_timer);
 		BT_timer = NULL;
+	}
+	
+	//APP_LOG(APP_LOG_LEVEL_INFO, "DEINIT, CANCEL HR TIMER");
+	if (hr_timer != NULL) {
+		app_timer_cancel(hr_timer);
+		hr_timer = NULL;
 	}
 	
 	// destroy the window if it exists
