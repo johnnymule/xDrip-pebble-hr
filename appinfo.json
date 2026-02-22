@@ -111,7 +111,7 @@
   "shortName": "xDrip+HR",
   "uuid": "79f8ecb3-7214-4bfc-b996-cb95148ee6d3",
   "versionCode": 2,
-  "versionLabel": "1.5",
+  "versionLabel": "1.4-hr",
   "watchapp": {
     "watchface": true
   },

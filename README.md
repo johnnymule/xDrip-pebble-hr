@@ -134,4 +134,4 @@ Adjust these `GRect` values to move things around. Just keep the total width wit
 
 ---
 
-**Version:** 1.5 (based on xDrip-pebble 1.4)
+**Version:** 1.4-hr (based on xDrip-pebble 1.4)
