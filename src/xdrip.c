@@ -2018,7 +2018,7 @@ void window_load_cgm(Window *window_cgm) {
 	layer_add_child(window_layer_cgm, text_layer_get_layer(cgmtime_layer));
 
 	// HEART ICON (left of HR number)
-	heart_icon_layer = bitmap_layer_create(GRect(45, 58, 20, 24));
+	heart_icon_layer = bitmap_layer_create(GRect(45, 58, 24, 24));
 	heart_bitmap = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_HEART);
 	bitmap_layer_set_bitmap(heart_icon_layer, heart_bitmap);
 	bitmap_layer_set_alignment(heart_icon_layer, GAlignCenter);
@@ -2026,11 +2026,11 @@ void window_load_cgm(Window *window_cgm) {
 
 	// HEART RATE DISPLAY (number only, to the right of heart icon)
 	#ifdef PBL_COLOR
-	hr_layer = text_layer_create(GRect(65, 58, 36, 24));
+	hr_layer = text_layer_create(GRect(71, 58, 32, 24));
 	text_layer_set_text_color(hr_layer, GColorDukeBlue);
 	text_layer_set_background_color(hr_layer, GColorWhite);
 	#else
-	hr_layer = text_layer_create(GRect(65, 58, 36, 24));
+	hr_layer = text_layer_create(GRect(71, 58, 32, 24));
 	text_layer_set_text_color(hr_layer, GColorBlack);
 	text_layer_set_background_color(hr_layer, GColorClear);
 	#endif
