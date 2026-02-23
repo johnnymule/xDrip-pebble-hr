@@ -14,6 +14,14 @@ A modified xDrip watchface for Pebble smartwatches that adds **heart rate displa
 
 ---
 
+## 📥 Download
+
+**Latest release: [xDrip-pebble-hr.pbw](../../releases/latest/download/xDrip-pebble-hr.pbw)**
+
+Or grab it from the [Releases](../../releases) page.
+
+---
+
 ## ⌚ Compatible Devices
 
 | Model | Heart Rate | Notes |
@@ -22,14 +30,6 @@ A modified xDrip watchface for Pebble smartwatches that adds **heart rate displa
 | Pebble 2 (no HR) | ❌ No | Works as regular xDrip watchface, no HR display |
 | Pebble Time / Time Steel / Time Round | ❌ No | No HR sensor |
 | Pebble Classic / Steel | ❌ No | No HR sensor |
-
----
-
-## 📥 Download
-
-**Latest release: [xDrip-pebble-hr.pbw](../../releases/latest/download/xdrip-pebble-hr.pbw)**
-
-Or grab it from the [Releases](../../releases) page.
 
 ---
 
@@ -104,8 +104,8 @@ health_service_events_subscribe(health_handler, NULL);
 | Trend arrow | (85, -7) | 78x50 |
 | Delta | (0, 33) | 144x50 |
 | CGM time | (5, 58) | 40x24 |
-| **Heart icon** | **(45, 60)** | **20x20** |
-| **HR number** | **(65, 58)** | **24x24** |
+| **Heart icon** | **(45, 63)** | **18x16** |
+| **HR number** | **(65, 58)** | **36x24** |
 | App status | (77, 58) | 40x24 |
 | Watch time | (0, 82) | 144x44 |
 | Date | (0, 120) | 144x29 |
@@ -116,13 +116,22 @@ health_service_events_subscribe(health_handler, NULL);
 The HR display is created in `window_load_cgm()`:
 ```c
 // Heart icon first (left)
-heart_icon_layer = bitmap_layer_create(GRect(45, 60, 20, 20));
+heart_icon_layer = bitmap_layer_create(GRect(45, 63, 18, 16));
 
 // Then HR number (right of icon)
-hr_layer = text_layer_create(GRect(65, 58, 24, 24));
+hr_layer = text_layer_create(GRect(65, 58, 36, 24));
 ```
 
 Adjust these `GRect` values to move things around. Just keep the total width within ~32px or you'll overlap the app status.
+
+---
+
+## 📝 Changelog
+
+### v1.4-hr (2025-02-22)
+- Fixed heart icon format to pure black/white 8-bit RGB for proper Pebble display
+- Adjusted heart icon layer dimensions to 18x16 (removed vertical padding)
+- Heart icon now properly aligned with y=63 to match other status icons
 
 ---
 
@@ -130,7 +139,6 @@ Adjust these `GRect` values to move things around. Just keep the total width wit
 
 - **Original xDrip-pebble** by [jstevensog](https://github.com/jstevensog/xDrip-pebble)
 - **cgm-pebble** (Nightscout upstream) by the Nightscout community
-- **Heart icon** from [Twemoji](https://github.com/twitter/twemoji) (CC-BY 4.0)
 
 ---
 
