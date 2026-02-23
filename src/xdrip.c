@@ -3,6 +3,14 @@
 /* The line below will set the debug message level.  Make sure you set this to 0 before building a release. */
 #define DEBUG_LEVEL 0
 
+// Persistent storage keys for caching glucose data
+#define PERSIST_BG_KEY 1
+#define PERSIST_DELTA_KEY 2
+#define PERSIST_CGM_TIME_KEY 3
+#define PERSIST_APP_TIME_KEY 4
+#define PERSIST_ICON_KEY 5
+#define PERSIST_BAT_KEY 6
+
 // global window variables
 // ANYTHING THAT IS CALLED BY PEBBLE API HAS TO BE NOT STATIC
 
@@ -16,16 +24,20 @@ TextLayer *watch_battlevel_layer = NULL;
 TextLayer *time_watch_layer = NULL;
 TextLayer *time_app_layer = NULL;
 TextLayer *date_app_layer = NULL;
+TextLayer *hr_layer = NULL;			// Heart rate display layer
 
 BitmapLayer *icon_layer = NULL;
 BitmapLayer *appicon_layer = NULL;
+BitmapLayer *heart_icon_layer = NULL;
 
 GBitmap *icon_bitmap = NULL;
 GBitmap *appicon_bitmap = NULL;
 GBitmap *specialvalue_bitmap = NULL;
+GBitmap *heart_bitmap = NULL;
 
 static char time_watch_text[] = "00:00";
 static char date_app_text[] = "Wed 13 Jan";
+static char hr_text[12] = "--";			// Heart rate text buffer (number only, heart is bitmap)
 
 // variables for AppSync
 AppSync sync_cgm;
@@ -36,6 +48,7 @@ static uint8_t sync_buffer_cgm[140];
 // variables for timers and time
 AppTimer *timer_cgm = NULL;
 AppTimer *BT_timer = NULL;
+AppTimer *hr_timer = NULL;  // Timer for retrying HR read
 time_t time_now = 0;
 
 // global variable for bluetooth connection
@@ -46,7 +59,7 @@ const uint8_t BATTLEVEL_FORMATTED_SIZE = 8;
 
 // global variables for sync tuple functions
 // buffers have to be static and hardcoded
-static char current_icon[2];
+static char current_icon[4];
 static char last_bg[6];
 static int current_bg = 0;
 static bool currentBG_isMMOL = false;
@@ -424,6 +437,46 @@ static void battery_handler(BatteryChargeState charge_state) {
 
 
 } // end battery_handler
+
+// load_heart_rate - reads current heart rate and updates display
+static void load_heart_rate();
+
+static void hr_timer_callback(void *data) {
+	hr_timer = NULL;
+	load_heart_rate();
+}
+
+static void load_heart_rate() {
+	// Check if HR is available
+	HealthValue hr = health_service_peek_current_value(HealthMetricHeartRateBPM);
+	
+	// Validate the reading (HR should be between 30 and 220 for humans)
+	if (hr > 30 && hr < 220) {
+		snprintf(hr_text, sizeof(hr_text), "%d", (int)hr);
+		// Got a valid reading, don't retry
+		if (hr_timer != NULL) {
+			app_timer_cancel(hr_timer);
+			hr_timer = NULL;
+		}
+	} else {
+		// Invalid or no reading, show -- and retry
+		snprintf(hr_text, sizeof(hr_text), "--");
+		if (hr_timer == NULL) {
+			hr_timer = app_timer_register(5000, hr_timer_callback, NULL);
+		}
+	}
+	
+	if (hr_layer != NULL) {
+		text_layer_set_text(hr_layer, hr_text);
+	}
+} // end load_heart_rate
+
+// health_handler - callback for health service events
+static void health_handler(HealthEventType event, void *context) {
+	if (event == HealthEventHeartRateUpdate) {
+		load_heart_rate();
+	}
+} // end health_handler
 
 static void alert_handler_cgm(uint8_t alertValue) {
 	//APP_LOG(APP_LOG_LEVEL_INFO, "ALERT HANDLER");
@@ -1713,6 +1766,7 @@ void sync_tuple_changed_callback_cgm(const uint32_t key, const Tuple* new_tuple,
 		#endif
 		strncpy(current_icon, new_tuple->value->cstring, ICON_MSGSTR_SIZE);
 		load_icon();
+		persist_write_string(PERSIST_ICON_KEY, current_icon);
 		break; // break for CGM_ICON_KEY
 
 	case CGM_BG_KEY:;
@@ -1721,6 +1775,7 @@ void sync_tuple_changed_callback_cgm(const uint32_t key, const Tuple* new_tuple,
 		#endif
 		strncpy(last_bg, new_tuple->value->cstring, BG_MSGSTR_SIZE);
 		load_bg();
+		persist_write_string(PERSIST_BG_KEY, last_bg);
 		break; // break for CGM_BG_KEY
 
 	case CGM_TCGM_KEY:;
@@ -1729,6 +1784,7 @@ void sync_tuple_changed_callback_cgm(const uint32_t key, const Tuple* new_tuple,
 		#endif
 		current_cgm_time = new_tuple->value->uint32;
 		load_cgmtime();
+		persist_write_int(PERSIST_CGM_TIME_KEY, current_cgm_time);
 		// as long as current_cgm_time is not zero, we know we have gotten an update from the app,
 		// so we reset minutes_cgm to 6, so the pebble doesn't request another one.
 		if (current_cgm_time != 0) {		
@@ -1742,6 +1798,7 @@ void sync_tuple_changed_callback_cgm(const uint32_t key, const Tuple* new_tuple,
 		#endif
 		current_app_time = new_tuple->value->uint32;
 		load_apptime();		
+		persist_write_int(PERSIST_APP_TIME_KEY, current_app_time);
 		break; // break for CGM_TAPP_KEY
 
 	case CGM_DLTA_KEY:;
@@ -1750,6 +1807,7 @@ void sync_tuple_changed_callback_cgm(const uint32_t key, const Tuple* new_tuple,
 		#endif
 		strncpy(current_bg_delta, new_tuple->value->cstring, BGDELTA_MSGSTR_SIZE);
 		load_bg_delta();
+		persist_write_string(PERSIST_DELTA_KEY, current_bg_delta);
 		break; // break for CGM_DLTA_KEY
 	
 	case CGM_UBAT_KEY:;
@@ -1760,6 +1818,7 @@ void sync_tuple_changed_callback_cgm(const uint32_t key, const Tuple* new_tuple,
 		strncpy(last_battlevel, new_tuple->value->cstring, BATTLEVEL_MSGSTR_SIZE);
 		//APP_LOG(APP_LOG_LEVEL_INFO, "SYNC TUPLE: BATTERY LEVEL, CALL LOAD BATTLEVEL");
 		load_battlevel();
+		persist_write_string(PERSIST_BAT_KEY, last_battlevel);
 		//APP_LOG(APP_LOG_LEVEL_INFO, "SYNC TUPLE: BATTERY LEVEL OUT");
 		break; // break for CGM_UBAT_KEY
 
@@ -1958,6 +2017,28 @@ void window_load_cgm(Window *window_cgm) {
 	text_layer_set_text_alignment(cgmtime_layer, GTextAlignmentLeft);
 	layer_add_child(window_layer_cgm, text_layer_get_layer(cgmtime_layer));
 
+	// HEART ICON (left of HR number) - 18x18
+	heart_icon_layer = bitmap_layer_create(GRect(45, 63, 18, 18));
+	heart_bitmap = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_HEART);
+	bitmap_layer_set_bitmap(heart_icon_layer, heart_bitmap);
+	bitmap_layer_set_alignment(heart_icon_layer, GAlignCenter);
+	layer_add_child(window_layer_cgm, bitmap_layer_get_layer(heart_icon_layer));
+
+	// HEART RATE DISPLAY (number only, to the right of heart icon)
+	#ifdef PBL_COLOR
+	hr_layer = text_layer_create(GRect(65, 58, 36, 24));
+	text_layer_set_text_color(hr_layer, GColorDukeBlue);
+	text_layer_set_background_color(hr_layer, GColorWhite);
+	#else
+	hr_layer = text_layer_create(GRect(65, 58, 36, 24));
+	text_layer_set_text_color(hr_layer, GColorBlack);
+	text_layer_set_background_color(hr_layer, GColorClear);
+	#endif
+	text_layer_set_font(hr_layer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
+	text_layer_set_text_alignment(hr_layer, GTextAlignmentLeft);
+	layer_add_child(window_layer_cgm, text_layer_get_layer(hr_layer));
+	load_heart_rate();	// Initial HR read
+
 	// PHONE BATTERY LEVEL
 	#ifdef PBL_COLOR
 	battlevel_layer = text_layer_create(GRect(0, 150, 80, 18));
@@ -2020,13 +2101,33 @@ void window_load_cgm(Window *window_cgm) {
 	
 	// put " " (space) in bg field so logo continues to show
 	// " " (space) also shows these are init values, not bad or null values
+	// Load persisted data first if available, so we don't show "LOAD" after menu trips
+	if (persist_exists(PERSIST_BG_KEY)) {
+		persist_read_string(PERSIST_BG_KEY, last_bg, sizeof(last_bg));
+	}
+	if (persist_exists(PERSIST_DELTA_KEY)) {
+		persist_read_string(PERSIST_DELTA_KEY, current_bg_delta, sizeof(current_bg_delta));
+	}
+	if (persist_exists(PERSIST_CGM_TIME_KEY)) {
+		current_cgm_time = persist_read_int(PERSIST_CGM_TIME_KEY);
+	}
+	if (persist_exists(PERSIST_APP_TIME_KEY)) {
+		current_app_time = persist_read_int(PERSIST_APP_TIME_KEY);
+	}
+	if (persist_exists(PERSIST_ICON_KEY)) {
+		persist_read_string(PERSIST_ICON_KEY, current_icon, sizeof(current_icon));
+	}
+	if (persist_exists(PERSIST_BAT_KEY)) {
+		persist_read_string(PERSIST_BAT_KEY, last_battlevel, sizeof(last_battlevel));
+	}
+	
 	Tuplet initial_values_cgm[] = {
-		TupletCString(CGM_ICON_KEY, " "),
-		TupletCString(CGM_BG_KEY, " "),
-		TupletInteger(CGM_TCGM_KEY, 0),
-		TupletInteger(CGM_TAPP_KEY, 0),
-		TupletCString(CGM_DLTA_KEY, "LOAD"),
-		TupletCString(CGM_UBAT_KEY, " "),
+		TupletCString(CGM_ICON_KEY, current_icon),
+		TupletCString(CGM_BG_KEY, last_bg),
+		TupletInteger(CGM_TCGM_KEY, current_cgm_time),
+		TupletInteger(CGM_TAPP_KEY, current_app_time),
+		TupletCString(CGM_DLTA_KEY, current_bg_delta),
+		TupletCString(CGM_UBAT_KEY, last_battlevel),
 		TupletCString(CGM_NAME_KEY, " ")
 	};
 	
@@ -2054,6 +2155,7 @@ void window_unload_cgm(Window *window_cgm) {
 	destroy_null_GBitmap(&appicon_bitmap);
 	//destroy_null_GBitmap(&cgmicon_bitmap);
 	destroy_null_GBitmap(&specialvalue_bitmap);
+	destroy_null_GBitmap(&heart_bitmap);
 	//destroy_null_GBitmap(&batticon_bitmap);
 
 	//APP_LOG(APP_LOG_LEVEL_INFO, "WINDOW UNLOAD, DESTROY BITMAPS IF EXIST");	
@@ -2061,6 +2163,7 @@ void window_unload_cgm(Window *window_cgm) {
 	//destroy_null_BitmapLayer(&cgmicon_layer);
 	destroy_null_BitmapLayer(&appicon_layer);
 	//destroy_null_BitmapLayer(&batticon_layer);
+	destroy_null_BitmapLayer(&heart_icon_layer);
 
 	//APP_LOG(APP_LOG_LEVEL_INFO, "WINDOW UNLOAD, DESTROY TEXT LAYERS IF EXIST");	
 	destroy_null_TextLayer(&bg_layer);
@@ -2072,6 +2175,7 @@ void window_unload_cgm(Window *window_cgm) {
 	destroy_null_TextLayer(&time_watch_layer);
 	destroy_null_TextLayer(&time_app_layer);
 	destroy_null_TextLayer(&date_app_layer);
+	destroy_null_TextLayer(&hr_layer);
 
 	//APP_LOG(APP_LOG_LEVEL_INFO, "WINDOW UNLOAD, DESTROY INVERTER LAYERS IF EXIST");	
 	//destroy_null_InverterLayer(&inv_battlevel_layer);
@@ -2090,6 +2194,9 @@ static void init_cgm(void) {
 	
 	//subscribe to the battery handler
 	battery_state_service_subscribe(battery_handler);
+	
+	// subscribe to health service for heart rate
+	health_service_events_subscribe(health_handler, NULL);
 	
 	// init the window pointer to NULL if it needs it
 	if (window_cgm != NULL) {
@@ -2134,6 +2241,9 @@ static void deinit_cgm(void) {
 
 	battery_state_service_unsubscribe();
 	
+	// unsubscribe from health service
+	health_service_events_unsubscribe();
+	
 	// cancel timers if they exist
 	//APP_LOG(APP_LOG_LEVEL_INFO, "DEINIT, CANCEL APP TIMER");
 	if (timer_cgm != NULL) {
@@ -2145,6 +2255,12 @@ static void deinit_cgm(void) {
 	if (BT_timer != NULL) {
 		app_timer_cancel(BT_timer);
 		BT_timer = NULL;
+	}
+	
+	//APP_LOG(APP_LOG_LEVEL_INFO, "DEINIT, CANCEL HR TIMER");
+	if (hr_timer != NULL) {
+		app_timer_cancel(hr_timer);
+		hr_timer = NULL;
 	}
 	
 	// destroy the window if it exists

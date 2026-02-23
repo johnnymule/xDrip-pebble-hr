@@ -9,6 +9,7 @@
     "ubat": 5
   },
   "capabilities": [
+    "health"
   ],
   "companyName": "Nightscout Contributors",
   "longName": "xDrip Watch Face",
@@ -96,16 +97,21 @@
         "type": "png"
       },
       {
+        "file": "images/heart.png",
+        "name": "IMAGE_HEART",
+        "type": "png"
+      },
+      {
         "file": "images/err.png",
         "name": "IMAGE_ERR",
         "type": "png"
       }
     ]
   },
-  "shortName": "xDrip Watch Face",
+  "shortName": "xDrip+HR",
   "uuid": "79f8ecb3-7214-4bfc-b996-cb95148ee6d3",
-  "versionCode": 1,
-  "versionLabel": "1.4",
+  "versionCode": 2,
+  "versionLabel": "1.4-hr",
   "watchapp": {
     "watchface": true
   },
