@@ -2017,8 +2017,8 @@ void window_load_cgm(Window *window_cgm) {
 	text_layer_set_text_alignment(cgmtime_layer, GTextAlignmentLeft);
 	layer_add_child(window_layer_cgm, text_layer_get_layer(cgmtime_layer));
 
-	// HEART ICON (left of HR number) - 19x18, no padding
-	heart_icon_layer = bitmap_layer_create(GRect(45, 63, 19, 18));
+	// HEART ICON (left of HR number) - 18x18
+	heart_icon_layer = bitmap_layer_create(GRect(45, 63, 18, 18));
 	heart_bitmap = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_HEART);
 	bitmap_layer_set_bitmap(heart_icon_layer, heart_bitmap);
 	bitmap_layer_set_alignment(heart_icon_layer, GAlignCenter);
