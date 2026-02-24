@@ -104,7 +104,7 @@ health_service_events_subscribe(health_handler, NULL);
 | Trend arrow | (85, -7) | 78x50 |
 | Delta | (0, 33) | 144x50 |
 | CGM time | (5, 58) | 40x24 |
-| **Heart icon** | **(45, 63)** | **18x16** |
+| **Heart icon** | **(45, 58)** | **18x16** |
 | **HR number** | **(65, 58)** | **36x24** |
 | App status | (77, 58) | 40x24 |
 | Watch time | (0, 82) | 144x44 |
@@ -116,7 +116,7 @@ health_service_events_subscribe(health_handler, NULL);
 The HR display is created in `window_load_cgm()`:
 ```c
 // Heart icon first (left)
-heart_icon_layer = bitmap_layer_create(GRect(45, 63, 18, 16));
+heart_icon_layer = bitmap_layer_create(GRect(45, 58, 18, 16));
 
 // Then HR number (right of icon)
 hr_layer = text_layer_create(GRect(65, 58, 36, 24));
@@ -127,6 +127,10 @@ Adjust these `GRect` values to move things around. Just keep the total width wit
 ---
 
 ## 📝 Changelog
+
+### v1.4-hr (2026-02-24)
+- Fixed heart icon y-position from 63 to 58 (now aligned with other status elements)
+- Removed periodic HR refresh timer—HR display now syncs with system HR card behavior
 
 ### v1.4-hr (2025-02-22)
 - Fixed heart icon format to pure black/white 8-bit RGB for proper Pebble display
