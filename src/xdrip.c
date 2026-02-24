@@ -49,7 +49,6 @@ static uint8_t sync_buffer_cgm[140];
 AppTimer *timer_cgm = NULL;
 AppTimer *BT_timer = NULL;
 AppTimer *hr_timer = NULL;  // Timer for retrying HR read
-AppTimer *hr_refresh_timer = NULL;  // Periodic timer for HR refresh when not worn
 time_t time_now = 0;
 
 // global variable for bluetooth connection
@@ -442,19 +441,9 @@ static void battery_handler(BatteryChargeState charge_state) {
 // load_heart_rate - reads current heart rate and updates display
 static void load_heart_rate();
 
-static void hr_timer_callback(void *data);
-static void hr_refresh_timer_callback(void *data);
-
 static void hr_timer_callback(void *data) {
 	hr_timer = NULL;
 	load_heart_rate();
-}
-
-static void hr_refresh_timer_callback(void *data) {
-	// Periodic refresh to detect when watch is not being worn
-	load_heart_rate();
-	// Reschedule for another 60 seconds
-	hr_refresh_timer = app_timer_register(60000, hr_refresh_timer_callback, NULL);
 }
 
 static void load_heart_rate() {
@@ -2209,9 +2198,6 @@ static void init_cgm(void) {
 	// subscribe to health service for heart rate
 	health_service_events_subscribe(health_handler, NULL);
 	
-	// start periodic HR refresh timer (every 60 seconds) to detect when watch is not worn
-	hr_refresh_timer = app_timer_register(60000, hr_refresh_timer_callback, NULL);
-	
 	// init the window pointer to NULL if it needs it
 	if (window_cgm != NULL) {
 		window_cgm = NULL;
@@ -2275,12 +2261,6 @@ static void deinit_cgm(void) {
 	if (hr_timer != NULL) {
 		app_timer_cancel(hr_timer);
 		hr_timer = NULL;
-	}
-	
-	//APP_LOG(APP_LOG_LEVEL_INFO, "DEINIT, CANCEL HR REFRESH TIMER");
-	if (hr_refresh_timer != NULL) {
-		app_timer_cancel(hr_refresh_timer);
-		hr_refresh_timer = NULL;
 	}
 	
 	// destroy the window if it exists
